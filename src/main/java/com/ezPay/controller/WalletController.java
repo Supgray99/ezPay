@@ -1,6 +1,7 @@
 package com.ezPay.controller;
 
 import com.ezPay.dto.AddMoneyRequestDto;
+import com.ezPay.dto.TransferRequestDto;
 import com.ezPay.dto.UserResponseDto;
 import com.ezPay.model.Transaction;
 import com.ezPay.service.WalletService;
@@ -27,5 +28,10 @@ public class WalletController {
     @GetMapping("/balance/{userId}")
     public ResponseEntity<UserResponseDto> getBalance(@PathVariable Long userId) {
         return ResponseEntity.ok(walletService.getBalance(userId));
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<UserResponseDto> transfer(@RequestBody TransferRequestDto dto) {
+        return ResponseEntity.ok(walletService.transfer(dto));
     }
 }
