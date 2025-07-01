@@ -1,5 +1,6 @@
 package com.ezPay.security;
 
+import com.ezPay.repository.BlacklistedTokenRepository;
 import com.ezPay.util.TokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -23,6 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
+    @Autowired
+    private BlacklistedTokenRepository blacklistedTokenRepository;
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -34,6 +38,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7); // remove "Bearer "
+
+            //token blacklist check
+            String jti = tokenProvider.extractTokenId(token);
+            if (blacklistedTokenRepository.findByJti(jti).isPresent()) {
+                // Token is blacklisted — reject the request
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Token has been revoked. Please log in again.");
+                return;
+            }
 
             String username = tokenProvider.extractUsername(token);
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

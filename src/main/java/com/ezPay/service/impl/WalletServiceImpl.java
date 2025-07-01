@@ -51,46 +51,59 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public UserResponseDto transfer(TransferRequestDto dto) {
-        if (dto.getFromUserId().equals(dto.getToUserId())) {
-            throw new RuntimeException("Cannot transfer to the same user");
+    public UserResponseDto transfer(TransferRequestDto dto, String jwtUsername) {
+        if (dto.getAmount() <= 0) {
+            throw new IllegalArgumentException("Transfer amount must be positive");
         }
 
         User sender = userRepository.findById(dto.getFromUserId())
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
 
+        // Validate token identity
+        if (!sender.getUsername().equals(jwtUsername)) {
+            throw new SecurityException("Token does not match sender");
+        }
+
         User receiver = userRepository.findById(dto.getToUserId())
                 .orElseThrow(() -> new RuntimeException("Receiver not found"));
 
-        if (sender.getBalance() < dto.getAmount()) {
-            throw new RuntimeException("Insufficient balance");
+        if (sender.getId() == (receiver.getId())) {
+            throw new IllegalArgumentException("Cannot transfer to self");
         }
 
-        // Perform transfer
+        if (sender.getBalance() < dto.getAmount()) {
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+
+        // Update balances
         sender.setBalance(sender.getBalance() - dto.getAmount());
         receiver.setBalance(receiver.getBalance() + dto.getAmount());
-
         userRepository.save(sender);
         userRepository.save(receiver);
 
-        // Log transactions
-        transactionRepository.save(Transaction.builder()
-                .userId(sender.getId())
-                .amount(dto.getAmount())
-                .timestamp(LocalDateTime.now())
-                .type(TransactionType.DEBIT)
-                .description("Transferred to " + receiver.getUsername())
-                .build());
+        // Log both transactions
+        LocalDateTime now = LocalDateTime.now();
 
-        transactionRepository.save(Transaction.builder()
+        Transaction debit = Transaction.builder()
+                .userId(sender.getId())
+                .amount(-dto.getAmount())
+                .timestamp(now)
+                .type(TransactionType.DEBIT)
+                .description("Sent to user ID " + receiver.getId())
+                .build();
+
+        Transaction credit = Transaction.builder()
                 .userId(receiver.getId())
                 .amount(dto.getAmount())
-                .timestamp(LocalDateTime.now())
+                .timestamp(now)
                 .type(TransactionType.CREDIT)
-                .description("Received from " + sender.getUsername())
-                .build());
+                .description("Received from user ID " + sender.getId())
+                .build();
 
+        transactionRepository.save(debit);
+        transactionRepository.save(credit);
+
+        // Return updated sender info
         return new UserResponseDto(sender.getId(), sender.getUsername(), sender.getBalance());
     }
-
 }

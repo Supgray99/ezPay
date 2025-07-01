@@ -8,5 +8,5 @@ import com.ezPay.model.Transaction;
 public interface WalletService {
     Transaction addBalance(AddMoneyRequestDto requestDto);
     UserResponseDto getBalance(Long userId);
-    UserResponseDto transfer(TransferRequestDto dto);
+    UserResponseDto transfer(TransferRequestDto dto, String jwtUsername);
 }

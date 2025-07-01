@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Component
 public class TokenProvider {
@@ -28,13 +29,25 @@ public class TokenProvider {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
+        String jti = UUID.randomUUID().toString(); // Generate unique token ID
+
         return Jwts.builder()
                 .setSubject(username)
                 .claim("roles", roles)
+                .setId(jti) // setting jti claim to the token
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String extractTokenId(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getId(); // this fetches the jti
     }
 
     public String extractUsername(String token) {
