@@ -1,6 +1,8 @@
 package com.ezPay.kafka;
 
 import com.ezPay.domain.events.WalletTransferEvent;
+import com.ezPay.model.WalletEventLog;
+import com.ezPay.repository.WalletEventLogRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -9,12 +11,30 @@ import org.springframework.stereotype.Component;
 @Component
 public class WalletEventConsumer {
 
+    private final WalletEventLogRepository eventLogRepository;
+
+    public WalletEventConsumer(WalletEventLogRepository eventLogRepository) {
+        this.eventLogRepository = eventLogRepository;
+    }
+
     @KafkaListener(
             topics = "wallet-transactions",
             groupId = "wallet-event-consumer",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void listen(WalletTransferEvent event) {
-        log.info("? Received WalletTransferEvent: {}", event);
+
+        log.info("Received WalletTransferEvent: {}", event);
+
+        WalletEventLog logEntry = new WalletEventLog();
+        logEntry.setTransactionId(event.getTransactionId());
+        logEntry.setSenderId(event.getSenderId());
+        logEntry.setReceiverId(event.getReceiverId());
+        logEntry.setAmount(event.getAmount());
+        logEntry.setStatus(event.getStatus());
+        logEntry.setTimestamp(event.getTimestamp());
+
+        eventLogRepository.save(logEntry);
+        log.info("Event persisted to DB: {}", logEntry);
     }
 }
