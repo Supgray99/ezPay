@@ -2,13 +2,18 @@ package com.ezPay.config;
 
 import com.ezPay.domain.events.WalletTransferEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,10 +34,26 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, WalletTransferEvent> kafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, WalletTransferEvent> kafkaListenerContainerFactory(
+            KafkaTemplate<String, WalletTransferEvent> kafkaTemplate
+    ) {
         ConcurrentKafkaListenerContainerFactory<String, WalletTransferEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+
+        // Retry + DLQ handler
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
+                kafkaTemplate,
+                (record, ex) -> new TopicPartition("wallet-transactions.DLQ", 0)
+        );
+
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(
+                recoverer,
+                new FixedBackOff(1000L, 3) // 3 retries with 1 sec delay
+        );
+
+        factory.setCommonErrorHandler(errorHandler);
+
         return factory;
     }
 }

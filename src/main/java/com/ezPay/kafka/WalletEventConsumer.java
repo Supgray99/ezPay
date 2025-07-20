@@ -26,6 +26,11 @@ public class WalletEventConsumer {
 
         log.info("Received WalletTransferEvent: {}", event);
 
+        // manually throwing errors for already published events to test DLQ
+//        if (event.getAmount() > 0) {
+//            throw new RuntimeException("Simulated failure for testing DLQ");
+//        }
+
         WalletEventLog logEntry = new WalletEventLog();
         logEntry.setTransactionId(event.getTransactionId());
         logEntry.setSenderId(event.getSenderId());
@@ -36,5 +41,13 @@ public class WalletEventConsumer {
 
         eventLogRepository.save(logEntry);
         log.info("Event persisted to DB: {}", logEntry);
+    }
+
+    @KafkaListener(
+            topics = "wallet-transactions.DLQ",
+            groupId = "dlq-handler"
+    )
+    public void handleFailed(WalletTransferEvent failedEvent) {
+        log.error("DLQ EVENT RECEIVED: {}", failedEvent);
     }
 }
