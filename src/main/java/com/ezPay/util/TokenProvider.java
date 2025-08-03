@@ -1,5 +1,6 @@
 package com.ezPay.util;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -72,5 +73,17 @@ public class TokenProvider {
                 .getBody()
                 .getExpiration();
         return expiration.before(new Date());
+    }
+
+    public long getExpirationDuration(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        Date expiration = claims.getExpiration();
+        long nowMillis = System.currentTimeMillis();
+        return (expiration.getTime() - nowMillis) / 1000; // convert to seconds
     }
 }
