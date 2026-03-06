@@ -4,10 +4,13 @@ import com.ezPay.model.WalletEventLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Repository
 public interface WalletEventLogRepository extends JpaRepository<WalletEventLog, Long> {
@@ -46,7 +49,15 @@ public interface WalletEventLogRepository extends JpaRepository<WalletEventLog, 
     List<WalletEventLog> findByTransactionIdIn(List<String> transactionIds);
 
     // Replay to fetch all events in a time window for bulk replay
-    List<WalletEventLog> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
+    /* streams rows from the database one at a time rather than loading them all in a list
+        in case the time stamps are very long apart and there is a huge number of rows to be replayed
+        thus preventing OOM
+     */
+    @Query("SELECT w FROM WalletEventLog w WHERE w.timestamp BETWEEN :from AND :to")
+    Stream<WalletEventLog> streamByTimestampBetween(
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
 
 
 }
