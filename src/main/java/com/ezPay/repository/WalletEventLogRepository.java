@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 public interface WalletEventLogRepository extends JpaRepository<WalletEventLog, Long> {
@@ -40,5 +41,12 @@ public interface WalletEventLogRepository extends JpaRepository<WalletEventLog, 
             LocalDateTime to,
             Pageable pageable
     );
+
+    // Replay to fetch specific events by their transaction IDs
+    List<WalletEventLog> findByTransactionIdIn(List<String> transactionIds);
+
+    // Replay to fetch all events in a time window for bulk replay
+    List<WalletEventLog> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
+
 
 }
