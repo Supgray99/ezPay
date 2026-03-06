@@ -1,3 +1,12 @@
+/*
+
+Transaction is the financial ledger of the system.
+Every time money moves — whether a wallet top-up or a transfer between two users — one or more Transaction rows are written to the transactions table.
+It is a permanent, append-only record. Rows are never updated or deleted, only inserted.
+
+*/
+
+
 package com.ezPay.model;
 
 import jakarta.persistence.*;
@@ -6,7 +15,14 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "transactions")
+@Table(
+        name = "transactions",
+        indexes = {
+                @Index(name = "idx_transactions_user_id", columnList = "userId"),
+                @Index(name = "idx_transactions_timestamp", columnList = "timestamp"),
+                @Index(name = "idx_transactions_user_timestamp", columnList = "userId, timestamp")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,8 +49,8 @@ public class Transaction {
     @Column(length = 255)
     private String description;
 
-// future-proofing: if you want to easily fetch user from transaction
-// @ManyToOne(fetch = FetchType.LAZY)
-// @JoinColumn(name = "userId", insertable = false, updatable = false)
-// private User us
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "userId", insertable = false, updatable = false)
+    private User user;
+
 }
