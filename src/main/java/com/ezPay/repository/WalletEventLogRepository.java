@@ -60,4 +60,5 @@ public interface WalletEventLogRepository extends JpaRepository<WalletEventLog, 
     );
 
 
+    boolean existsByTransactionId(String transactionId);
 }
