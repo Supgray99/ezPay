@@ -1,3 +1,11 @@
+
+/*
+WalletServiceImpl is the core business logic layer of the entire application.
+It's the only place where money actually moves.
+Everything else — controllers, Kafka, repositories — either feeds into it or reacts to it.
+ */
+
+
 package com.ezPay.service.impl;
 
 import com.ezPay.domain.events.WalletTransferEvent;
@@ -12,7 +20,9 @@ import com.ezPay.repository.TransactionRepository;
 import com.ezPay.repository.UserRepository;
 import com.ezPay.service.WalletService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -32,6 +42,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public Transaction addBalance(AddMoneyRequestDto requestDto) {
         User user = userRepository.findById(requestDto.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -58,6 +69,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public UserResponseDto transfer(TransferRequestDto dto, String jwtUsername) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -84,7 +96,10 @@ public class WalletServiceImpl implements WalletService {
                 throw new IllegalArgumentException("Insufficient balance");
             }
 
-            // All validations passed, proceed with transfer
+            /* All validations passed — optimistic locking via @Version on User
+             will throw OptimisticLockingFailureException if a concurrent update
+             modified either account between our read and this write*/
+
             sender.setBalance(sender.getBalance() - dto.getAmount());
             receiver.setBalance(receiver.getBalance() + dto.getAmount());
             userRepository.save(sender);
@@ -122,6 +137,19 @@ public class WalletServiceImpl implements WalletService {
             walletEventProducer.publish(event);
 
             return new UserResponseDto(sender.getId(), sender.getUsername(), sender.getBalance());
+
+        } catch (OptimisticLockingFailureException e) {
+            // Concurrent modification detected — surface as a retryable conflict
+            WalletTransferEvent failureEvent = new WalletTransferEvent(
+                    UUID.randomUUID().toString(),
+                    dto.getFromUserId().toString(),
+                    dto.getToUserId().toString(),
+                    dto.getAmount(),
+                    "FAILURE",
+                    now
+            );
+            walletEventProducer.publish(failureEvent);
+            throw new RuntimeException("Transfer conflict detected due to concurrent update. Please retry.", e);
 
         } catch (Exception e) {
             // Publish FAILURE event (if sender/receiver are known, else use dto values)
