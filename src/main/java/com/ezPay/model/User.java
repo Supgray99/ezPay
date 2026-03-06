@@ -7,7 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        indexes = {
+                @Index(name = "idx_users_username", columnList = "username")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,5 +31,8 @@ public class User {
 
     @Column(nullable = false)
     private Double balance = 0.0;
+
+    @Version
+    private Long version;
 
 }
