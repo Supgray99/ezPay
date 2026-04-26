@@ -73,13 +73,13 @@ public class WalletServiceImpl implements WalletService {
     public UserResponseDto transfer(TransferRequestDto dto, String jwtUsername) {
         LocalDateTime now = LocalDateTime.now();
 
+        User sender = userRepository.findByUsername(jwtUsername)
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
+
         try {
             if (dto.getAmount() <= 0) {
                 throw new IllegalArgumentException("Transfer amount must be positive");
             }
-
-            User sender = userRepository.findById(dto.getFromUserId())
-                    .orElseThrow(() -> new RuntimeException("Sender not found"));
 
             if (!sender.getUsername().equals(jwtUsername)) {
                 throw new SecurityException("Token does not match sender");
@@ -142,7 +142,7 @@ public class WalletServiceImpl implements WalletService {
             // Concurrent modification detected — surface as a retryable conflict
             WalletTransferEvent failureEvent = new WalletTransferEvent(
                     UUID.randomUUID().toString(),
-                    dto.getFromUserId().toString(),
+                    sender.getId().toString(),
                     dto.getToUserId().toString(),
                     dto.getAmount(),
                     "FAILURE",
@@ -155,7 +155,7 @@ public class WalletServiceImpl implements WalletService {
             // Publish FAILURE event (if sender/receiver are known, else use dto values)
             WalletTransferEvent failureEvent = new WalletTransferEvent(
                     UUID.randomUUID().toString(),
-                    dto.getFromUserId().toString(),
+                    sender.getId().toString(),
                     dto.getToUserId().toString(),
                     dto.getAmount(),
                     "FAILURE",

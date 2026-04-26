@@ -10,9 +10,6 @@ import org.springframework.validation.annotation.Validated;
 public class TransferRequestDto {
 
     @NotNull
-    private Long fromUserId;
-
-    @NotNull
     private Long toUserId;
 
     @NotNull
