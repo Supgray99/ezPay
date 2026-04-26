@@ -47,11 +47,6 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getBalance(userId));
     }
 
-//    @PostMapping("/transfer")
-//    public ResponseEntity<UserResponseDto> transfer(@RequestBody TransferRequestDto dto) {
-//        return ResponseEntity.ok(walletService.transfer(dto));
-//    }
-
     @PostMapping("/transfer")
     public ResponseEntity<UserResponseDto> transfer(@Valid @RequestBody TransferRequestDto dto,
                                                     HttpServletRequest request) {

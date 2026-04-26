@@ -1,11 +1,14 @@
 package com.ezPay.service.impl;
 
 import com.ezPay.dto.UserDto;
+import com.ezPay.dto.UserResponseDto;
 import com.ezPay.model.User;
 import com.ezPay.repository.UserRepository;
 import com.ezPay.service.UserService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -31,5 +34,16 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         return userRepository.save(user);
+    }
+
+    public List<UserResponseDto> searchByUsername(String username) {
+        return userRepository.findByUsernameContainingIgnoreCase(username)
+                .stream()
+                .map(user -> new UserResponseDto(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getBalance()
+                ))
+                .toList();
     }
 }
