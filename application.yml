@@ -4,6 +4,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all  # Wait for all replicas to confirm
+      retries: 3  # Retry up to 3 times on transient failures
+      properties:
+        enable-idempotence: true  # Exactly-once delivery, no duplicates
+        max.in.flight.requests.per.connection: 1  # Required when idempotence is true
     consumer:
       group-id: wallet-event-consumer
       auto-offset-reset: earliest
